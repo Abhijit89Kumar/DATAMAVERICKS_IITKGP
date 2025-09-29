@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiLabs - Contract Analysis Pipeline</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-logo">
+                    <img src="{{ url_for('static', filename='hilabs_logo.png') }}" alt="HiLabs" class="logo">
+                    <div class="header-text">
+                        <h1 class="title">HiLabs Contract Analysis Pipeline</h1>
+                        <p class="subtitle">Automated contract processing and analysis system</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Control Panel -->
+        <section class="control-panel">
+            <div class="control-content">
+                <button id="startBtn" class="btn btn-primary">
+                    <span class="btn-icon">&#9654;</span>
+                    Start Analysis
+                </button>
+                <button id="stopBtn" class="btn btn-secondary" disabled>
+                    <span class="btn-icon">&#9632;</span>
+                    Stop Analysis
+                </button>
+                <div class="status-info">
+                    <span class="status-label">Status:</span>
+                    <span id="statusText" class="status-text idle">Ready</span>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Live Output Section -->
+        <section class="output-section" id="outputSection" style="display: none;">
+            <div class="collapsible-header" onclick="toggleSection('liveOutput')">
+                <h3>Live Output</h3>
+                <span class="toggle-icon" id="liveOutputToggle">&#9660;</span>
+            </div>
+            <div id="liveOutput" class="collapsible-content">
+                <div class="output-controls">
+                    <button class="btn btn-small" onclick="clearOutput()">Clear</button>
+                    <button class="btn btn-small" onclick="toggleAutoScroll()">
+                        <span id="autoScrollText">Auto-scroll: ON</span>
+                    </button>
+                </div>
+                <div id="outputContainer" class="output-container"></div>
+            </div>
+        </section>
+
+        <!-- Analytics Dashboard -->
+        <section class="dashboard-section" id="dashboardSection" style="display: none;">
+            <div class="dashboard-header">
+                <h3>Analytics Dashboard</h3>
+                <div class="dashboard-status" id="dashboardStatus">Analysis Complete</div>
+            </div>
+            
+            <!-- Key Metrics Overview -->
+            <div class="metrics-overview">
+                <div class="metric-card primary" id="totalClausesCard">
+                    <div class="metric-value" id="totalClauses">--</div>
+                    <div class="metric-label">Total Clauses Analyzed</div>
+                    <div class="metric-change" id="totalClausesChange"></div>
+                </div>
+                <div class="metric-card success" id="standardClausesCard">
+                    <div class="metric-value" id="standardClauses">--</div>
+                    <div class="metric-label">Standard Clauses</div>
+                    <div class="metric-percentage" id="standardPercentage"></div>
+                </div>
+                <div class="metric-card warning" id="nonStandardClausesCard">
+                    <div class="metric-value" id="nonStandardClauses">--</div>
+                    <div class="metric-label">Non-Standard Clauses</div>
+                    <div class="metric-percentage" id="nonStandardPercentage"></div>
+                </div>
+                <div class="metric-card info" id="contractsProcessedCard">
+                    <div class="metric-value" id="contractsProcessed">--</div>
+                    <div class="metric-label">Contracts Processed</div>
+                    <div class="metric-success-rate" id="successRate"></div>
+                </div>
+            </div>
+
+            <!-- Detailed Analytics Grid -->
+            <div class="analytics-grid">
+                
+                <!-- Classification Distribution Chart -->
+                <div class="analytics-card chart-card">
+                    <div class="card-header">
+                        <h4>Classification Distribution</h4>
+                        <div class="card-actions">
+                            <button class="btn btn-small" onclick="refreshChart('classification')">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="chart-container">
+                            <canvas id="classificationChart" width="300" height="200"></canvas>
+                        </div>
+                        <div class="chart-legend" id="classificationLegend"></div>
+                    </div>
+                </div>
+
+                <!-- Contract Types Analysis -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h4>Contract Types Analysis</h4>
+                    </div>
+                    <div class="card-content">
+                        <div class="contract-types-grid" id="contractTypesGrid">
+                            <div class="contract-type-item">
+                                <div class="contract-type-header">TN Contracts</div>
+                                <div class="contract-type-stats">
+                                    <span class="stat-value" id="tnCount">--</span>
+                                    <span class="stat-label">contracts</span>
+                                </div>
+                                <div class="contract-type-breakdown">
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">Standard:</span>
+                                        <span class="breakdown-value" id="tnStandard">--</span>
+                                    </div>
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">Non-Standard:</span>
+                                        <span class="breakdown-value warning" id="tnNonStandard">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="contract-type-item">
+                                <div class="contract-type-header">WA Contracts</div>
+                                <div class="contract-type-stats">
+                                    <span class="stat-value" id="waCount">--</span>
+                                    <span class="stat-label">contracts</span>
+                                </div>
+                                <div class="contract-type-breakdown">
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">Standard:</span>
+                                        <span class="breakdown-value" id="waStandard">--</span>
+                                    </div>
+                                    <div class="breakdown-item">
+                                        <span class="breakdown-label">Non-Standard:</span>
+                                        <span class="breakdown-value warning" id="waNonStandard">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Similarity Scores Distribution -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h4>Similarity Scores Analysis</h4>
+                    </div>
+                    <div class="card-content">
+                        <div class="similarity-stats">
+                            <div class="similarity-metric">
+                                <div class="similarity-label">Average Semantic Similarity</div>
+                                <div class="similarity-value" id="avgSemantic">--</div>
+                                <div class="similarity-bar">
+                                    <div class="similarity-fill" id="avgSemanticBar"></div>
+                                </div>
+                            </div>
+                            <div class="similarity-metric">
+                                <div class="similarity-label">Average Cosine Similarity</div>
+                                <div class="similarity-value" id="avgCosine">--</div>
+                                <div class="similarity-bar">
+                                    <div class="similarity-fill" id="avgCosineBar"></div>
+                                </div>
+                            </div>
+                            <div class="similarity-metric">
+                                <div class="similarity-label">Average Jaccard Similarity</div>
+                                <div class="similarity-value" id="avgJaccard">--</div>
+                                <div class="similarity-bar">
+                                    <div class="similarity-fill" id="avgJaccardBar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classification Accuracy -->
+                <div class="analytics-card info-card">
+                    <div class="card-header">
+                        <h4>Classification Accuracy</h4>
+                        <div class="accuracy-indicator" id="accuracyLevel">
+                            <div class="accuracy-dot"></div>
+                            <span id="accuracyText">Calculating...</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="accuracy-metrics">
+                            <div class="accuracy-item">
+                                <div class="accuracy-label">Processing Success Rate</div>
+                                <div class="accuracy-value" id="processingSuccessRate">--%</div>
+                            </div>
+                            <div class="accuracy-item">
+                                <div class="accuracy-label">Classification Confidence</div>
+                                <div class="accuracy-value" id="classificationConfidence">--%</div>
+                            </div>
+                            <div class="accuracy-item">
+                                <div class="accuracy-label">Template Match Quality</div>
+                                <div class="accuracy-value" id="templateMatchQuality">--%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LLM Explanations Summary -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h4>LLM Explanations Summary</h4>
+                    </div>
+                    <div class="card-content">
+                        <div class="llm-summary-stats">
+                            <div class="llm-stat-item">
+                                <div class="llm-stat-value" id="llmExplanationsCount">--</div>
+                                <div class="llm-stat-label">Explanations Generated</div>
+                            </div>
+                            <div class="llm-stat-item">
+                                <div class="llm-stat-value" id="llmCoverage">--%</div>
+                                <div class="llm-stat-label">Coverage Rate</div>
+                            </div>
+                        </div>
+                        <div class="llm-insights" id="llmInsights">
+                            <p class="loading-text">Processing LLM insights...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="analytics-card">
+                    <div class="card-header">
+                        <h4>Performance Metrics</h4>
+                    </div>
+                    <div class="card-content">
+                        <div class="performance-grid">
+                            <div class="performance-item">
+                                <div class="performance-label">Total Processing Time</div>
+                                <div class="performance-value" id="totalTime">--</div>
+                            </div>
+                            <div class="performance-item">
+                                <div class="performance-label">Average Time per Contract</div>
+                                <div class="performance-value" id="avgTimePerContract">--</div>
+                            </div>
+                            <div class="performance-item">
+                                <div class="performance-label">Classification Accuracy</div>
+                                <div class="performance-value" id="classificationAccuracy">--%</div>
+                            </div>
+                            <div class="performance-item">
+                                <div class="performance-label">Success Rate</div>
+                                <div class="performance-value success" id="overallSuccessRate">--%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2024 HiLabs Contract Analysis System. All rights reserved.</p>
+                <p class="footer-note">Professional contract processing and analysis pipeline</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Global variables
+        let eventSource = null;
+        let autoScroll = true;
+        let isRunning = false;
+
+        // DOM elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusText = document.getElementById('statusText');
+        const outputSection = document.getElementById('outputSection');
+        const dashboardSection = document.getElementById('dashboardSection');
+        const outputContainer = document.getElementById('outputContainer');
+        const autoScrollText = document.getElementById('autoScrollText');
+
+        // Event listeners
+        startBtn.addEventListener('click', startAnalysis);
+        stopBtn.addEventListener('click', stopAnalysis);
+
+        // Start analysis
+        async function startAnalysis() {
+            try {
+                const response = await fetch('/start_analysis', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    isRunning = true;
+                    updateUIState(true);
+                    clearOutput();
+                    startEventStream();
+                } else {
+                    addOutputLine('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                addOutputLine('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Stop analysis
+        async function stopAnalysis() {
+            try {
+                await fetch('/stop_analysis', {method: 'POST'});
+                isRunning = false;
+                updateUIState(false);
+                stopEventStream();
+            } catch (error) {
+                addOutputLine('Error stopping analysis: ' + error.message, 'error');
+            }
+        }
+
+        // Update UI state
+        function updateUIState(running) {
+            startBtn.disabled = running;
+            stopBtn.disabled = !running;
+            
+            if (running) {
+                statusText.textContent = 'Running';
+                statusText.className = 'status-text running';
+                outputSection.style.display = 'block';
+                dashboardSection.style.display = 'none';
+            } else {
+                statusText.textContent = 'Ready';
+                statusText.className = 'status-text idle';
+            }
+        }
+
+        // Start Server-Sent Events stream
+        function startEventStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            eventSource = new EventSource('/stream');
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleStreamData(data);
+            };
+            
+            eventSource.onerror = function(event) {
+                console.error('EventSource error:', event);
+                if (!isRunning) {
+                    stopEventStream();
+                }
+            };
+        }
+
+        // Stop event stream
+        function stopEventStream() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+        }
+
+        // Handle stream data
+        function handleStreamData(data) {
+            switch (data.type) {
+                case 'progress':
+                    addOutputLine(data.data.line, data.data.line_type, data.data.timestamp);
+                    break;
+                case 'complete':
+                    handleCompletion(data.data);
+                    break;
+                case 'results':
+                    populateDashboard(data.data);
+                    // Show dashboard immediately when data is received
+                    dashboardSection.style.display = 'block';
+                    break;
+                case 'error':
+                    addOutputLine('Error: ' + data.data.error, 'error', data.data.timestamp);
+                    break;
+                case 'heartbeat':
+                    // Keep connection alive
+                    break;
+            }
+        }
+
+        // Handle completion
+        function handleCompletion(data) {
+            isRunning = false;
+            updateUIState(false);
+            stopEventStream();
+            
+            if (data.success) {
+                statusText.textContent = 'Completed';
+                statusText.className = 'status-text success';
+                addOutputLine('Analysis completed successfully!', 'success');
+                // Dashboard is already shown when results are received
+            } else {
+                statusText.textContent = 'Failed';
+                statusText.className = 'status-text error';
+                addOutputLine('Analysis failed with return code: ' + data.return_code, 'error');
+            }
+        }
+
+        // Add output line
+        function addOutputLine(text, type = 'info', timestamp = null) {
+            const line = document.createElement('div');
+            line.className = 'output-line ' + type;
+            
+            const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            line.innerHTML = `<span class="timestamp">[${timeStr}]</span> ${escapeHtml(text)}`;
+            
+            outputContainer.appendChild(line);
+            
+            if (autoScroll) {
+                outputContainer.scrollTop = outputContainer.scrollHeight;
+            }
+        }
+
+        // Populate comprehensive dashboard
+        function populateDashboard(results) {
+            if (!results || !results.analytics) return;
+            
+            const analytics = results.analytics;
+            
+            // Update key metrics
+            updateKeyMetrics(analytics);
+            
+            // Update detailed analytics
+            updateContractTypesAnalysis(analytics);
+            updateSimilarityScoresAnalysis(analytics);
+            updateAccuracyAnalysis(analytics);
+            updateLLMSummary(analytics, results);
+            updatePerformanceMetrics(analytics);
+            
+            // Create visualization charts
+            createClassificationChart(analytics);
+            
+            // Show dashboard
+            dashboardSection.style.display = 'block';
+        }
+
+
+        // Update key metrics cards
+        function updateKeyMetrics(analytics) {
+            document.getElementById('totalClauses').textContent = analytics.total_clauses.toLocaleString();
+            document.getElementById('standardClauses').textContent = analytics.standard_clauses.toLocaleString();
+            document.getElementById('nonStandardClauses').textContent = analytics.non_standard_clauses.toLocaleString();
+            document.getElementById('contractsProcessed').textContent = analytics.total_contracts.toLocaleString();
+            
+            document.getElementById('standardPercentage').textContent = analytics.standard_percentage + '%';
+            document.getElementById('nonStandardPercentage').textContent = analytics.non_standard_percentage + '%';
+            document.getElementById('successRate').textContent = analytics.success_rate + '% Success Rate';
+        }
+
+        // Update contract types analysis
+        function updateContractTypesAnalysis(analytics) {
+            document.getElementById('tnCount').textContent = analytics.tn_contracts;
+            document.getElementById('tnStandard').textContent = analytics.tn_standard;
+            document.getElementById('tnNonStandard').textContent = analytics.tn_non_standard;
+            document.getElementById('waCount').textContent = analytics.wa_contracts;
+            document.getElementById('waStandard').textContent = analytics.wa_standard;
+            document.getElementById('waNonStandard').textContent = analytics.wa_non_standard;
+        }
+
+        // Update similarity scores analysis
+        function updateSimilarityScoresAnalysis(analytics) {
+            // Use actual calculated average scores
+            const avgSemantic = analytics.avg_semantic || 0;
+            const avgCosine = analytics.avg_cosine || 0;
+            const avgJaccard = analytics.avg_jaccard || 0;
+            
+            document.getElementById('avgSemantic').textContent = avgSemantic.toFixed(3);
+            document.getElementById('avgCosine').textContent = avgCosine.toFixed(3);
+            document.getElementById('avgJaccard').textContent = avgJaccard.toFixed(3);
+            
+            // Update progress bars (convert to percentage)
+            updateSimilarityBar('avgSemanticBar', Math.round(avgSemantic * 100));
+            updateSimilarityBar('avgCosineBar', Math.round(avgCosine * 100));
+            updateSimilarityBar('avgJaccardBar', Math.round(avgJaccard * 100));
+        }
+
+        function updateSimilarityBar(elementId, percentage) {
+            const bar = document.getElementById(elementId);
+            if (bar) {
+                bar.style.width = percentage + '%';
+            }
+        }
+
+        // Update risk analysis
+        function updateAccuracyAnalysis(analytics) {
+            const accuracyLevel = document.getElementById('accuracyLevel');
+            const accuracyText = document.getElementById('accuracyText');
+            const processingSuccessRate = document.getElementById('processingSuccessRate');
+            const classificationConfidence = document.getElementById('classificationConfidence');
+            const templateMatchQuality = document.getElementById('templateMatchQuality');
+            
+            // Calculate processing success rate
+            const successRate = analytics.success_rate || 0;
+            processingSuccessRate.textContent = `${successRate}%`;
+            
+            // Calculate classification confidence based on similarity scores
+            const avgSemantic = analytics.avg_semantic || 0;
+            const avgCosine = analytics.avg_cosine || 0;
+            const avgJaccard = analytics.avg_jaccard || 0;
+            const avgConfidence = ((avgSemantic + avgCosine + avgJaccard) / 3 * 100);
+            classificationConfidence.textContent = `${avgConfidence.toFixed(1)}%`;
+            
+            // Template match quality based on semantic similarity
+            const matchQuality = (avgSemantic * 100);
+            templateMatchQuality.textContent = `${matchQuality.toFixed(1)}%`;
+            
+            // Set accuracy indicator based on overall performance
+            if (successRate >= 90 && avgConfidence >= 80) {
+                accuracyLevel.className = 'accuracy-indicator high';
+                accuracyText.textContent = 'Excellent';
+            } else if (successRate >= 75 && avgConfidence >= 65) {
+                accuracyLevel.className = 'accuracy-indicator medium';
+                accuracyText.textContent = 'Good';
+            } else {
+                accuracyLevel.className = 'accuracy-indicator low';
+                accuracyText.textContent = 'Needs Review';
+            }
+        }
+
+        // Update LLM summary
+        function updateLLMSummary(analytics, results) {
+            const llmCount = analytics.llm_explanations_count || 0;
+            const nonStandardCount = analytics.non_standard_clauses || 0;
+            
+            document.getElementById('llmExplanationsCount').textContent = llmCount;
+            document.getElementById('llmCoverage').textContent = nonStandardCount > 0 
+                ? Math.round((llmCount / nonStandardCount) * 100) + '%'
+                : '0%';
+            
+            const insights = document.getElementById('llmInsights');
+            if (nonStandardCount > 0) {
+                insights.innerHTML = `
+                    <div class="insight-item">
+                        <strong>Key Finding:</strong> ${nonStandardCount} clauses require attention
+                    </div>
+                    <div class="insight-item">
+                        <strong>Coverage:</strong> LLM explanations generated for non-standard clauses
+                    </div>
+                `;
+            } else {
+                insights.innerHTML = '<p class="no-insights">All clauses appear to be standard.</p>';
+            }
+        }
+
+        // Update performance metrics
+        function updatePerformanceMetrics(analytics) {
+            document.getElementById('totalTime').textContent = (analytics.total_time || 0).toFixed(2) + 's';
+            document.getElementById('avgTimePerContract').textContent = (analytics.avg_time_per_contract || 0) + 's';
+            
+            // Calculate accuracy based on classification confidence (simplified)
+            const accuracy = analytics.total_clauses > 0 ? Math.round((analytics.standard_clauses / analytics.total_clauses) * 100) : 0;
+            document.getElementById('classificationAccuracy').textContent = accuracy + '%';
+            document.getElementById('overallSuccessRate').textContent = (analytics.success_rate || 0) + '%';
+        }
+
+        // Create classification distribution chart
+        function createClassificationChart(analytics) {
+            const canvas = document.getElementById('classificationChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple pie chart visualization
+            const standardClauses = analytics.standard_clauses || 0;
+            const nonStandardClauses = analytics.non_standard_clauses || 0;
+            const total = standardClauses + nonStandardClauses;
+            
+            if (total > 0) {
+                const standardAngle = (standardClauses / total) * 2 * Math.PI;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw pie chart
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = Math.min(centerX, centerY) - 20;
+                
+                // Standard clauses (green)
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, standardAngle);
+                ctx.lineTo(centerX, centerY);
+                ctx.fillStyle = '#059669';
+                ctx.fill();
+                
+                // Non-standard clauses (orange)
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, standardAngle, 2 * Math.PI);
+                ctx.lineTo(centerX, centerY);
+                ctx.fillStyle = '#d97706';
+                ctx.fill();
+                
+                // Update legend
+                const legend = document.getElementById('classificationLegend');
+                legend.innerHTML = `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #059669;"></div>
+                        <span>Standard (${analytics.standard_percentage || 0}%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #d97706;"></div>
+                        <span>Non-Standard (${analytics.non_standard_percentage || 0}%)</span>
+                    </div>
+                `;
+            }
+        }
+
+        // Export functions
+        function exportToPDF() {
+            // Open results folder in file explorer
+            const outputDir = process_status.results?.output_directory;
+            if (outputDir) {
+                addOutputLine(`Results available at: ${outputDir}`, 'info');
+            } else {
+                addOutputLine('No results directory available yet.', 'warning');
+            }
+        }
+
+        function exportToCSV() {
+            // Inform user about existing CSV files
+            addOutputLine('CSV reports are automatically generated and saved in the results directory.', 'info');
+            addOutputLine('Files include: analysis_report.csv, classification_summary_report.csv', 'info');
+        }
+
+        function openResultsFolder() {
+            // Show results folder path
+            const outputDir = process_status.results?.output_directory;
+            if (outputDir) {
+                addOutputLine(`Results folder: ${outputDir}`, 'info');
+                addOutputLine('Open this path in your file explorer to access all analysis files.', 'info');
+            } else {
+                addOutputLine('No results directory available yet. Run an analysis first.', 'warning');
+            }
+        }
+
+        function refreshChart(chartType) {
+            // Refresh the classification chart
+            if (process_status.results && process_status.results.analytics) {
+                createClassificationChart(process_status.results.analytics);
+                addOutputLine(`${chartType} chart refreshed successfully.`, 'success');
+            } else {
+                addOutputLine('No data available to refresh chart.', 'warning');
+            }
+        }
+
+        // Toggle collapsible sections
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId);
+            const toggle = document.getElementById(sectionId + 'Toggle');
+            
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.innerHTML = '&#9660;';
+            } else {
+                content.classList.add('collapsed');
+                toggle.innerHTML = '&#9654;';
+            }
+        }
+
+        // Clear output
+        function clearOutput() {
+            outputContainer.innerHTML = '';
+        }
+
+        // Toggle auto-scroll
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            autoScrollText.textContent = 'Auto-scroll: ' + (autoScroll ? 'ON' : 'OFF');
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            console.log('HiLabs Contract Analysis Frontend loaded');
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            stopEventStream();
+        });
+    </script>
+</body>
+</html>
+
