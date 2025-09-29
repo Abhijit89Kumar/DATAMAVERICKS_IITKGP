@@ -321,9 +321,11 @@ pip install -r requirements.txt
 
 ### Environment Variables
 
-Create a .env file in the project root:
-.env
-HF_TOKEN
+Create a `.env` file in the project root with the following content:
+
+```ini
+HF_TOKEN=hf_xxx
+```
 
 
 ---
