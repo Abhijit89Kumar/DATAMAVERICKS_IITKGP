@@ -358,7 +358,6 @@ Then navigate to http://localhost:5000 in your browser.
 *Memory Errors*
 
 - Close unnecessary applications
-- Reduce batch size
 - Enable GPU acceleration
 
 *OCR Not Working*
@@ -369,8 +368,6 @@ Then navigate to http://localhost:5000 in your browser.
 *Slow Performance*
 
 - Enable GPU acceleration
-- Reduce semantic model size
-- Adjust batch processing parameters
 
 *Import Errors*
 
